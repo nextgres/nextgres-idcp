@@ -1,0 +1,4 @@
+comment = 'NEXTGRES In-Database Connection Pool'
+default_version = '0.1.0'
+module_pathname = '$libdir/nextgres_idcp'
+relocatable = true

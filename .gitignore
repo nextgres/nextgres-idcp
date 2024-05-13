@@ -1,0 +1,39 @@
+/aclocal.m4
+/config.guess
+/config.log
+/config.mak
+/config.status
+/config.sub
+/configure
+/install-sh
+/pgbouncer
+/.objs
+/third-party/libusual/*
+/third-party/uthash/*
+
+# Object files
+*.o
+
+# Coverage files
+*.gcno
+*.gcda
+
+# Libraries
+*.lib
+*.a
+
+# LLVM bitcode
+*.bc
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.app
+
+# Dependencies
+.deps
