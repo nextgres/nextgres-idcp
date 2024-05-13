@@ -455,7 +455,11 @@ ng_idcp_proxy_main (
  * Now if backend is not tainted it is possible to schedule some other client
  * to this backend.
  */
-static bool backend_reschedule(Channel *chan, bool is_new) {
+static bool
+backend_reschedule (
+  Channel  *chan,
+  bool      is_new
+) {
   Channel *pending = chan->pool->pending_clients;
 
   chan->backend_is_ready = false;
@@ -518,7 +522,7 @@ static bool backend_reschedule(Channel *chan, bool is_new) {
     chan->peer = NULL;
   }
   return true;
-} /* func() */
+} /* backend_reschedule() */
 
 /* ------------------------------------------------------------------------- */
 
@@ -526,7 +530,11 @@ static bool backend_reschedule(Channel *chan, bool is_new) {
  * Start new backend for particular pool associated with dbname/role
  * combination. Backend is forked using BackendStartup function.
  */
-static Channel *backend_start(SessionPool *pool, char **error) {
+static Channel *
+backend_start (
+  SessionPool    *pool,
+  char          **error
+) {
   Channel *chan;
   char postmaster_port[8];
   char *options = (char *) palloc(string_length(pool->cmdline_options)
@@ -622,14 +630,17 @@ static Channel *backend_start(SessionPool *pool, char **error) {
     chan = NULL;
   }
   return chan;
-} /* func() */
+} /* backend_start() */
 
 /* ------------------------------------------------------------------------- */
 
 /*
  * Create new channel.
  */
-static Channel *channel_create(Proxy *proxy) {
+static Channel *
+channel_create (
+  Proxy *proxy
+) {
   Channel *chan = (Channel *)palloc0(sizeof(Channel));
   chan->magic = ACTIVE_CHANNEL_MAGIC;
   chan->proxy = proxy;
@@ -646,7 +657,11 @@ static Channel *channel_create(Proxy *proxy) {
  * It is not possible to remove channel immediately because it can be triggered
  * by other epoll events. So link all channels in L1 list for pending delete.
  */
-static void channel_hangout(Channel *chan, char const *op) {
+static void
+channel_hangout (
+  Channel        *chan,
+  char const     *op
+) {
   Channel **ipp;
   Channel *peer = chan->peer;
   if (chan->is_disconnected || chan->pool == NULL)
@@ -714,7 +729,10 @@ static void channel_hangout(Channel *chan, char const *op) {
 /*
  * Try to read more data from the channel and send it to the peer.
  */
-static bool channel_read(Channel *chan) {
+static bool
+channel_read (
+  Channel *chan
+) {
   int msg_start;
   while (chan->tx_size == 0) /* there is no pending write op */
   {
@@ -1044,7 +1062,11 @@ static bool channel_read(Channel *chan) {
 /*
  * Register new channel in wait event set.
  */
-static bool channel_register(Proxy *proxy, Channel *chan) {
+static bool
+channel_register (
+  Proxy      *proxy,
+  Channel    *chan
+) {
   pgsocket sock =
       chan->client_port ? chan->client_port->sock : chan->backend_socket;
   /* Using edge epoll mode requires non-blocking sockets */
@@ -1069,7 +1091,10 @@ static bool channel_register(Proxy *proxy, Channel *chan) {
 /*
  * Perform delayed deletion of channel
  */
-static void channel_remove(Channel *chan) {
+static void
+channel_remove (
+  Channel *chan
+) {
   Assert(chan->is_disconnected); /* should be marked as disconnected by
                                     channel_hangout */
 
@@ -1122,7 +1147,11 @@ static void channel_remove(Channel *chan) {
  * Returns true if there is nothing to do or operation is successfully
  * completed, false in case of error or socket buffer is full.
  */
-static bool channel_write(Channel *chan, bool synchronous) {
+static bool
+channel_write (
+  Channel  *chan,
+  bool      synchronous
+) {
   Channel *peer = chan->peer;
   if (!chan->client_port && chan->is_interrupted) {
     /* Send terminate command to the backend. */
@@ -1191,7 +1220,10 @@ static bool channel_write(Channel *chan, bool synchronous) {
  * Attach client to backend. Return true if new backend is attached, false
  * otherwise.
  */
-static bool client_attach(Channel *chan) {
+static bool
+client_attach (
+  Channel *chan
+) {
   Channel *idle_backend = chan->pool->idle_backends;
   chan->is_idle = false;
   chan->pool->n_idle_clients -= 1;
@@ -1249,7 +1281,11 @@ static bool client_attach(Channel *chan) {
  * Parse client's startup packet and assign client to proper connection pool
  * based on dbname/role
  */
-static bool client_connect(Channel *chan, int startup_packet_size) {
+static bool
+client_connect (
+  Channel    *chan,
+  int         startup_packet_size
+) {
   bool found;
   SessionPoolKey key;
   char *startup_packet = chan->buf;
@@ -1356,7 +1392,10 @@ static bool client_connect(Channel *chan, int startup_packet_size) {
 
 /* ------------------------------------------------------------------------- */
 
-static bool is_transactional_statement(char *stmt) {
+static bool
+is_transactional_statement (
+  char *stmt
+) {
   static char const *const non_tx_stmts[] = {
     "create tablespace",
     "create database",
@@ -1379,15 +1418,22 @@ static bool is_transactional_statement(char *stmt) {
 
 /* ------------------------------------------------------------------------- */
 
-static bool is_transaction_start(char *stmt) {
+static bool
+is_transaction_start (
+  char *stmt
+) {
   return pg_strncasecmp(stmt, "begin", 5) == 0 ||
          pg_strncasecmp(stmt, "start", 5) == 0;
 } /* is_transaction_start() */
 
 /* ------------------------------------------------------------------------- */
 
-static void *libpq_connectdb(char const *keywords[], char const *values[],
-                             char **error) {
+static void *
+libpq_connectdb (
+  char const   *keywords[],
+  char const   *values[],
+  char        **error
+) {
   PGconn *conn = PQconnectdbParams(keywords, values, false);
   if (conn && PQstatus(conn) != CONNECTION_OK) {
     ereport(WARNING,
@@ -1408,7 +1454,11 @@ static void *libpq_connectdb(char const *keywords[], char const *values[],
  * Add new client accepted by postmaster. This client will be assigned to
  * concrete session pool when it's startup packet is received.
  */
-static void proxy_add_client(Proxy *proxy, Port *port) {
+static void
+proxy_add_client (
+  Proxy    *proxy,
+  Port     *port
+) {
   Channel *chan = channel_create(proxy);
   chan->client_port = port;
   chan->backend_socket = PGINVALID_SOCKET;
@@ -1433,13 +1483,21 @@ static void proxy_add_client(Proxy *proxy, Port *port) {
 
 /* ------------------------------------------------------------------------- */
 
-static void proxy_add_listen_socket(Proxy *proxy, pgsocket socket) {
+static void
+proxy_add_listen_socket (
+  Proxy        *proxy,
+  pgsocket      socket
+) {
   AddWaitEventToSet(proxy->wait_events, WL_SOCKET_ACCEPT, socket, NULL, NULL);
 } /* proxy_add_listen_socket() */
 
 /* ------------------------------------------------------------------------- */
 
-static Proxy *proxy_create(ConnectionProxyState *state, int max_backends) {
+static Proxy *
+proxy_create (
+  ConnectionProxyState *state,
+  int                   max_backends
+) {
   HASHCTL ctl;
   Proxy *proxy;
   MemoryContext proxy_memctx =
@@ -1484,7 +1542,10 @@ proxy_handle_sigterm (
 /*
  * Main proxy loop
  */
-static void proxy_loop(Proxy *proxy) {
+static void
+proxy_loop (
+  Proxy *proxy
+) {
   int i, n_ready;
   WaitEvent ready[MAX_READY_EVENTS];
   Channel *chan, *next;
@@ -1610,7 +1671,11 @@ static void proxy_loop(Proxy *proxy) {
  * can not be started or client is assigned to the backend because of
  * configuration limitations.
  */
-static void report_error_to_client(Channel *chan, char const *error) {
+static void
+report_error_to_client (
+  Channel        *chan,
+  char const     *error
+) {
   StringInfoData msgbuf;
   initStringInfo(&msgbuf);
   pq_sendbyte(&msgbuf, 'E');
@@ -1620,14 +1685,19 @@ static void report_error_to_client(Channel *chan, char const *error) {
   pq_sendbyte(&msgbuf, '\0');
   socket_write(chan, msgbuf.data, msgbuf.len);
   pfree(msgbuf.data);
-} /* func() */
+} /* report_error_to_client() */
 
 /* ------------------------------------------------------------------------- */
 
 /*
  * Try to write data to the socket.
  */
-static ssize_t socket_write(Channel *chan, char const *buf, size_t size) {
+static ssize_t
+socket_write (
+  Channel        *chan,
+  char const     *buf,
+  size_t          size
+) {
   ssize_t rc;
 #ifdef USE_SSL
   int waitfor = 0;
@@ -1645,7 +1715,11 @@ static ssize_t socket_write(Channel *chan, char const *buf, size_t size) {
 
 /* ------------------------------------------------------------------------- */
 
-static char *string_append(char *dst, char const *src) {
+static char *
+string_append (
+  char         *dst,
+  char const   *src
+) {
   while (*src) {
     if (*src == ' ')
       *dst++ = '\\';
@@ -1656,13 +1730,20 @@ static char *string_append(char *dst, char const *src) {
 
 /* ------------------------------------------------------------------------- */
 
-static bool string_equal(char const *a, char const *b) {
+static bool
+string_equal (
+  char const *a,
+  char const *b
+) {
   return a == b ? true : a == NULL || b == NULL ? false : strcmp(a, b) == 0;
 } /* string_equal() */
 
 /* ------------------------------------------------------------------------- */
 
-static size_t string_length(char const *str) {
+static size_t
+string_length (
+  char const *str
+) {
   size_t spaces = 0;
   char const *p = str;
   if (p == NULL)
@@ -1674,7 +1755,10 @@ static size_t string_length(char const *str) {
 
 /* ------------------------------------------------------------------------- */
 
-static List *string_list_copy(List *orig) {
+static List *
+string_list_copy (
+  List *orig
+) {
   List *copy = list_copy(orig);
   ListCell *cell;
   foreach (cell, copy) {
@@ -1685,7 +1769,11 @@ static List *string_list_copy(List *orig) {
 
 /* ------------------------------------------------------------------------- */
 
-static bool string_list_equal(List *a, List *b) {
+static bool
+string_list_equal (
+  List *a,
+  List *b
+) {
   const ListCell *ca, *cb;
   if (list_length(a) != list_length(b))
     return false;
@@ -1695,7 +1783,10 @@ static bool string_list_equal(List *a, List *b) {
 
 /* ------------------------------------------------------------------------- */
 
-static size_t string_list_length(List *list) {
+static size_t
+string_list_length (
+  List *list
+) {
   ListCell *cell;
   size_t length = 0;
   foreach (cell, list) {
